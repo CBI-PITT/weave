@@ -19,6 +19,11 @@ def MBToPix(MB,bit=16):
     return MB/bit*8*1024*1024
 
 file = r"Z:/testData/hooksBrain/composites_C1_Z0681.tif"
+outLocation = r"Z:\testWeave"
+
+file = r"C:\Users\alpha\OneDrive - University of Pittsburgh\Data Share\Alan\BrainA_test\composites\composite_z501_c561.tif"
+outLocation = r"C:\code\testOut"
+
 
 print('Reading {}'.format(file))
 image = io.imread(file)
@@ -83,7 +88,7 @@ for ii,oo in product(range(subImages['split'][0]),range(subImages['split'][1])):
         subImages[(ii,oo)]
 
 
-outLocation = r"Z:\testWeave"
+
 
 ## Full Resolution
 # Write full set
@@ -96,11 +101,52 @@ for ii in subImages:
     else:
         pass
     
-    
-# Read by tile
-with tifffile.imread(fileName, aszarr=True) as store:
-    za = zarr.open(store, mode='r')
-    tile = za[:128, :128]
+
+resolutionLevel = 5
+outShape = (
+    len(range(0,subImages['orig_shape'][0],resolutionLevel+1)),
+    len(range(0,subImages['orig_shape'][1],resolutionLevel+1))
+    )
+z = np.zeros(outShape,dtype=subImages['orig_dtype'])
+
+for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
+    z[ii::outShape[0], oo::outShape[1]] = \
+        subImages[(ii,oo)]
+        
+resolutionLevel = 5
+outShape = (
+    subImages[(0,0)].shape[0]*(resolutionLevel+1),
+    subImages[(0,0)].shape[1]*(resolutionLevel+1)
+    )
+z = np.zeros(outShape,dtype=subImages['orig_dtype'])
+
+for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
+    z[ii::resolutionLevel+1, oo::resolutionLevel+1] = \
+        subImages[(ii,oo)]
+
+
+# resolutionLevel = 5
+# y=0
+# x=0
+# for ii,oo in product(range(resolutionLevel),range(resolutionLevel)):
+#     shape = subImages[(ii,oo)].shape
+#     y+=shape[0]
+#     x+=shape[1]
+# outShape = (y,x)
+
+# z = np.zeros(outShape,dtype=subImages['orig_dtype'])
+
+# for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
+#     z[ii::resolutionLevel+1, oo::resolutionLevel+1] = \
+#         subImages[(ii,oo)]
+
+
+# # Read by tile
+# with tifffile.imread(fileName, aszarr=True) as store:
+#     za = zarr.open(store, mode='r')
+#     tile = za[:128, :128]
+
+
     
 
 
