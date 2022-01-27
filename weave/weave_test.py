@@ -21,8 +21,8 @@ def MBToPix(MB,bit=16):
 file = r"Z:/testData/hooksBrain/composites_C1_Z0681.tif"
 outLocation = r"Z:\testWeave"
 
-file = r"C:\Users\alpha\OneDrive - University of Pittsburgh\Data Share\Alan\BrainA_test\composites\composite_z501_c561.tif"
-outLocation = r"C:\code\testOut"
+# file = r"C:\Users\alpha\OneDrive - University of Pittsburgh\Data Share\Alan\BrainA_test\composites\composite_z501_c561.tif"
+# outLocation = r"C:\code\testOut"
 
 
 print('Reading {}'.format(file))
@@ -49,17 +49,13 @@ for ii in range(1,max(image.shape)+1):
 
 
 
-
-ySub = subSamp
-xSub = subSamp
-
 subImages = {}
 subImages['orig_shape'] = image.shape
 subImages['orig_dtype'] = image.dtype
-subImages['split'] = (ySub,xSub)
-for ii,oo in product(range(ySub), range(xSub)):
+subImages['sub_sample'] = subSamp
+for ii,oo in product(range(subSamp), range(subSamp)):
     # print('Reading {} {}'.format(ii,oo))
-    subImages[(ii,oo)] = image[ii::ySub, oo::xSub]
+    subImages[(ii,oo)] = image[ii::subSamp, oo::subSamp]
     # print(subImages[(ii,oo)].shape)
     
 
@@ -76,21 +72,26 @@ print('Low-Res version = {} MB'.format(size))
 print('Shape of single low res image = {}'.format(shapeSingleImg))
 
 
-
-
+# Determine the size of the image for the given resolution level
+# Insert this info into the subImages dict as 'resolution{#}_shape'
+y=0
+x=0
+for ii in range(subImages['sub_sample']):
+    y+=subImages[(ii,0)].shape[0]
+    x+=subImages[(0,ii)].shape[1]
+    subImages['resolution{}_shape'.format(subImages['sub_sample']-ii-1)] = (y,x)
 
 chunkSize = (512,512)
 
 # Reassemble Full resolution (whole image)
 canvas = np.zeros(subImages['orig_shape'], dtype=subImages['orig_dtype'])
-for ii,oo in product(range(subImages['split'][0]),range(subImages['split'][1])):
-    canvas[ii::subImages['split'][0], oo::subImages['split'][1]] = \
+for ii,oo in product(range(subImages['sub_sample']),range(subImages['sub_sample'])):
+    canvas[ii::subImages['sub_sample'], oo::subImages['sub_sample']] = \
         subImages[(ii,oo)]
 
 
 
 
-## Full Resolution
 # Write full set
 for ii in subImages:
     if isinstance(ii,tuple) == True:
@@ -101,44 +102,72 @@ for ii in subImages:
     else:
         pass
     
+    
+
+## Reconstruct any resolution level of the whole image
+# Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
+# Higher resolution levels are lower resolution
 
 resolutionLevel = 5
-outShape = (
-    len(range(0,subImages['orig_shape'][0],resolutionLevel+1)),
-    len(range(0,subImages['orig_shape'][1],resolutionLevel+1))
-    )
-z = np.zeros(outShape,dtype=subImages['orig_dtype'])
+weaveNumber = subImages['sub_sample'] - resolutionLevel
 
-for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
-    z[ii::outShape[0], oo::outShape[1]] = \
-        subImages[(ii,oo)]
-        
-resolutionLevel = 5
-outShape = (
-    subImages[(0,0)].shape[0]*(resolutionLevel+1),
-    subImages[(0,0)].shape[1]*(resolutionLevel+1)
-    )
-z = np.zeros(outShape,dtype=subImages['orig_dtype'])
-
-for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
-    z[ii::resolutionLevel+1, oo::resolutionLevel+1] = \
-        subImages[(ii,oo)]
-
-
-# resolutionLevel = 5
+# # Determine the size of the image for the given resolution level
 # y=0
 # x=0
-# for ii,oo in product(range(resolutionLevel),range(resolutionLevel)):
-#     shape = subImages[(ii,oo)].shape
-#     y+=shape[0]
-#     x+=shape[1]
-# outShape = (y,x)
+# for ii in range(weaveNumber):
+#     y+=subImages[(ii,0)].shape[0]
+#     x+=subImages[(0,ii)].shape[1]
+    
+# # Form canvas and add woven data
+# z = np.zeros((y,x),dtype=subImages['orig_dtype'])
+# for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+#     z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
+    
+# Form canvas and add woven data
+z = np.zeros(subImages['resolution{}_shape'.format(resolutionLevel)],dtype=subImages['orig_dtype'])
+for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+    z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
+    
 
-# z = np.zeros(outShape,dtype=subImages['orig_dtype'])
 
-# for ii,oo in product(range(resolutionLevel+1),range(resolutionLevel+1)):
-#     z[ii::resolutionLevel+1, oo::resolutionLevel+1] = \
-#         subImages[(ii,oo)]
+# ## Attempt at slicing to allow for targeted reading of files
+# # Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
+# # Higher resolution levels are lower resolution
+
+# resolutionLevel = 8
+# weaveNumber = subImages['sub_sample'] - resolutionLevel
+# ystart = 5000
+# ystop = 10000
+# ystep = 1
+# xstart = 5000
+# xstop = 10000
+# xstep = 1
+
+# ystart = 5000//subImages['sub_sample']
+# ystop = 10000//subImages['sub_sample']
+# ystep = 1
+# xstart = 5000//subImages['sub_sample']
+# xstop = 10000//subImages['sub_sample']
+# xstep = 1
+
+# # Determine location ni lowres images
+# ySubset = range(subImages['orig_shape'][0])[ystart:ystop:ystep]
+# xSubset = range(subImages['orig_shape'][1])[xstart:xstop:xstep]
+# # Determine the size of the image for the given resolution level
+# y=0
+# x=0
+# for ii in range(weaveNumber):
+#     y+=subImages[(ii,0)].shape[0]
+#     x+=subImages[(0,ii)].shape[1]
+
+# canvasShape = (y,x)
+
+# # Form canvas and add woven data
+# z = np.zeros(canvasShape,dtype=subImages['orig_dtype'])
+# for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+#     z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
+
+
 
 
 # # Read by tile
