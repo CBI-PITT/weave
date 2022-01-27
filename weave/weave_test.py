@@ -7,6 +7,7 @@ This is a temporary script file.
 
 from skimage import io
 from itertools import product
+from matplotlib import pyplot as plt
 import numpy as np
 import os
 import math
@@ -103,72 +104,121 @@ for ii in subImages:
         pass
     
     
-
+###############################################################################
 ## Reconstruct any resolution level of the whole image
 # Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
 # Higher resolution levels are lower resolution
 
-resolutionLevel = 5
+resolutionLevel = 9
 weaveNumber = subImages['sub_sample'] - resolutionLevel
-
-# # Determine the size of the image for the given resolution level
-# y=0
-# x=0
-# for ii in range(weaveNumber):
-#     y+=subImages[(ii,0)].shape[0]
-#     x+=subImages[(0,ii)].shape[1]
-    
-# # Form canvas and add woven data
-# z = np.zeros((y,x),dtype=subImages['orig_dtype'])
-# for ii,oo in product(range(weaveNumber),range(weaveNumber)):
-#     z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
-    
+ 
 # Form canvas and add woven data
 z = np.zeros(subImages['resolution{}_shape'.format(resolutionLevel)],dtype=subImages['orig_dtype'])
 for ii,oo in product(range(weaveNumber),range(weaveNumber)):
     z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
     
+###############################################################################
+
+##  A Means to slice specific 'resolution levels' which will enable chunk
+##  access to images on disk 
+# Desired slice from a specific resolution level
+ystart = 2000
+ystop = 5032
+ystep = 1
+xstart = 2000
+xstop = 3536
+xstep = 1
+
+resolutionLevel = 3
 
 
-# ## Attempt at slicing to allow for targeted reading of files
-# # Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
-# # Higher resolution levels are lower resolution
+weaveNumber = subImages['sub_sample'] - resolutionLevel
+currentShape = subImages['resolution{}_shape'.format(resolutionLevel)]
 
-# resolutionLevel = 8
-# weaveNumber = subImages['sub_sample'] - resolutionLevel
-# ystart = 5000
-# ystop = 10000
-# ystep = 1
-# xstart = 5000
-# xstop = 10000
-# xstep = 1
+ratioToFullRes = []
+for idx in range(2):
+    ratioToFullRes.append(currentShape[idx]/subImages['orig_shape'][idx])
 
-# ystart = 5000//subImages['sub_sample']
-# ystop = 10000//subImages['sub_sample']
-# ystep = 1
-# xstart = 5000//subImages['sub_sample']
-# xstop = 10000//subImages['sub_sample']
-# xstep = 1
+# Build canvas
+currentShape = (
+    len(range(currentShape[0])[ystart:ystop:ystep]),
+    len(range(currentShape[0])[xstart:xstop:xstep]),
+    )
+x = np.zeros(currentShape,dtype=subImages['orig_dtype'])
 
-# # Determine location ni lowres images
-# ySubset = range(subImages['orig_shape'][0])[ystart:ystop:ystep]
-# xSubset = range(subImages['orig_shape'][1])[xstart:xstop:xstep]
-# # Determine the size of the image for the given resolution level
-# y=0
-# x=0
-# for ii in range(weaveNumber):
-#     y+=subImages[(ii,0)].shape[0]
-#     x+=subImages[(0,ii)].shape[1]
+## Transform to coordinates to small images for targeted reads
+# Location in current Resolution / ratioToFullRes / subImages['sub_sample'] = location in small images
+ystart = math.ceil(ystart/ratioToFullRes[0]/subImages['sub_sample'])
+ystop = math.ceil(ystop/ratioToFullRes[0]/subImages['sub_sample'])
 
-# canvasShape = (y,x)
-
-# # Form canvas and add woven data
-# z = np.zeros(canvasShape,dtype=subImages['orig_dtype'])
-# for ii,oo in product(range(weaveNumber),range(weaveNumber)):
-#     z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
+xstart = math.ceil(xstart/ratioToFullRes[1]/subImages['sub_sample'])
+xstop = math.ceil(xstop/ratioToFullRes[1]/subImages['sub_sample'])
 
 
 
+for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+    x[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)][ystart:ystop:ystep,xstart:xstop:xstep]
+
+
+###############################################################################
+
+# ystart = ystart // subImages['sub_sample']
+# ystop = ystop // subImages['sub_sample']
+# ystep = ystep
+# xstart = xstart // subImages['sub_sample']
+# xstop = xstop // subImages['sub_sample']
+# xstep = xstep
+
+# # Find lowres loctions
+# ystart = ystart // subImages['sub_sample']
+# ystop = ystop // subImages['sub_sample']
+# ystep = ystep
+# xstart = xstart // subImages['sub_sample']
+# xstop = xstop // subImages['sub_sample']
+# xstep = xstep
+
+
+
+
+## Attempt at slicing to allow for targeted reading of files
+# Slice inside fullres data, output = selected resolution level
+# Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
+# Higher resolution levels are lower resolution
+
+for ii in range(11):
+    resolutionLevel = ii
+    weaveNumber = subImages['sub_sample'] - resolutionLevel
+    
+    # Slice inside of fullres data
+    ystart = 5000
+    ystop = 10000
+    ystep = 1
+    xstart = 5000
+    xstop = 10000
+    xstep = 1
+    
+    ystart = 5000//subImages['sub_sample']
+    ystop = 10000//subImages['sub_sample']
+    ystep = 1
+    xstart = 5000//subImages['sub_sample']
+    xstop = 10000//subImages['sub_sample']
+    xstep = 1
+    
+    # Determine location in lowres images
+    ySubset = range(subImages['orig_shape'][0])[ystart:ystop:ystep]
+    xSubset = range(subImages['orig_shape'][1])[xstart:xstop:xstep]
+    # Determine the size of the image for the given resolution level
+    
+    canvasShape = subImages['resolution{}_shape'.format(resolutionLevel)]
+    
+    # Form canvas and add woven data
+    z = np.zeros(canvasShape,dtype=subImages['orig_dtype'])
+    for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+        z[ii::weaveNumber,oo::weaveNumber] = subImages[(ii,oo)]
+    
+    io.imshow(z)
+    plt.show()
+    print(z.shape)
 
 # # Read by tile
 # with tifffile.imread(fileName, aszarr=True) as store:
