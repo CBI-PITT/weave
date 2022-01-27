@@ -7,7 +7,7 @@ except ImportError:
 
 
 #from .reader import napari_get_reader
-from .bil_data_loader_widget import napari_experimental_provide_dock_widget
+#from .bil_data_loader_widget import napari_experimental_provide_dock_widget
 
 
 
