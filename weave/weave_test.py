@@ -19,11 +19,11 @@ def pixToMB(pixNum,bit=16):
 def MBToPix(MB,bit=16):
     return MB/bit*8*1024*1024
 
-file = r"Z:/testData/hooksBrain/composites_C1_Z0681.tif"
-outLocation = r"Z:\testWeave"
+# file = r"Z:/testData/hooksBrain/composites_C1_Z0681.tif"
+# outLocation = r"Z:\testWeave"
 
-# file = r"C:\Users\alpha\OneDrive - University of Pittsburgh\Data Share\Alan\BrainA_test\composites\composite_z501_c561.tif"
-# outLocation = r"C:\code\testOut"
+file = r"C:\Users\alpha\OneDrive - University of Pittsburgh\Data Share\Alan\BrainA_test\composites\composite_z501_c561.tif"
+outLocation = r"C:\code\testOut"
 
 
 print('Reading {}'.format(file))
@@ -103,7 +103,21 @@ for ii in subImages:
     else:
         pass
     
-    
+
+
+
+def convPix(fromPix, resFrom, resTo, axis):
+    '''
+    Given a pixel location in resolution level 'resFrom' + 
+    desired location in another resolution level 'resTo'
+    this function will transform over the given axis. 
+    '''
+    return fromPix * \
+        (subImages['resolution{}_shape'.format(resTo)][axis] / \
+        subImages['resolution{}_shape'.format(resFrom)][axis])
+
+
+
 ###############################################################################
 ## Reconstruct any resolution level of the whole image
 # Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
@@ -197,6 +211,8 @@ for ii in range(11):
     xstop = 10000
     xstep = 1
     
+    canvasShape = subImages['resolution{}_shape'.format(resolutionLevel)]
+    
     ystart = 5000//subImages['sub_sample']
     ystop = 10000//subImages['sub_sample']
     ystep = 1
@@ -209,7 +225,7 @@ for ii in range(11):
     xSubset = range(subImages['orig_shape'][1])[xstart:xstop:xstep]
     # Determine the size of the image for the given resolution level
     
-    canvasShape = subImages['resolution{}_shape'.format(resolutionLevel)]
+    
     
     # Form canvas and add woven data
     z = np.zeros(canvasShape,dtype=subImages['orig_dtype'])
