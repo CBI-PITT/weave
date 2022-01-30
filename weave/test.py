@@ -4,7 +4,7 @@ Created on Fri Jan 28 15:19:18 2022
 
 @author: awatson
 """
-from weave import weave4 as wve
+from weave import weave5 as wve
 from imaris_ims_file_reader import ims
 from skimage import io
 from dask.delayed import delayed
@@ -56,7 +56,7 @@ array = da.stack((ch1,ch2))
 
 startTime = time.time()
 # z = wve.weave_make(array,outputLocation, client='c001.cbiserver:8786')
-z = wve.weave_make(array,outputLocation, compression = 'zlib', client='local')
+z = wve.weave_make(array,outputLocation, compression = 'zlib', client='local',batchSize=1)
 
 stopTime = time.time()
 
