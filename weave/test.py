@@ -30,9 +30,9 @@ ch1 = '/CBI_Hive/globus/pitt/bil/CH1'
 ch2 = '/CBI_Hive/globus/pitt/bil/CH2'
 outputLocation = '/CBI_Hive/globus/pitt/bil/weave'
 
-ch1 = '/CBI_FastStore/testWeave/TEST/CH1'
-ch2 = '/CBI_FastStore/testWeave/TEST/CH2'
-outputLocation = '/CBI_FastStore/testWeave'
+#ch1 = '/CBI_FastStore/testWeave/TEST/CH1'
+#ch2 = '/CBI_FastStore/testWeave/TEST/CH2'
+#outputLocation = '/CBI_FastStore/testWeave'
 
 
 ch1 = sorted(glob.glob(os.path.join(ch1,'*.tif')))
