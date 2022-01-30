@@ -139,7 +139,7 @@ class weave_make:
         
         
         print('Computing Saves')
-        print(toWrite)
+        #print(toWrite)
         
         if self.client is None:
             pass

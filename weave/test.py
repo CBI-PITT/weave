@@ -4,7 +4,7 @@ Created on Fri Jan 28 15:19:18 2022
 
 @author: awatson
 """
-from weave import weave3
+from weave import weave4 as wve
 from imaris_ims_file_reader import ims
 from skimage import io
 from dask.delayed import delayed
@@ -30,9 +30,9 @@ ch1 = '/CBI_Hive/globus/pitt/bil/CH1'
 ch2 = '/CBI_Hive/globus/pitt/bil/CH2'
 outputLocation = '/CBI_Hive/globus/pitt/bil/weave'
 
-# ch1 = '/CBI_FastStore/testWeave/TEST/CH1'
-# ch2 = '/CBI_FastStore/testWeave/TEST/CH2'
-# outputLocation = '/CBI_FastStore/testWeave'
+ch1 = '/CBI_FastStore/testWeave/TEST/CH1'
+ch2 = '/CBI_FastStore/testWeave/TEST/CH2'
+outputLocation = '/CBI_FastStore/testWeave'
 
 
 ch1 = sorted(glob.glob(os.path.join(ch1,'*.tif')))
@@ -55,8 +55,8 @@ ch2 = da.stack(ch2)
 array = da.stack((ch1,ch2))
 
 startTime = time.time()
-# z = weave2.weave_make(array,outputLocation, client='c001.cbiserver:8786')
-z = weave3.weave_make(array,outputLocation, compression = 'zlib', client='local')
+# z = wve.weave_make(array,outputLocation, client='c001.cbiserver:8786')
+z = wve.weave_make(array,outputLocation, compression = 'zlib', client='local')
 
 stopTime = time.time()
 
