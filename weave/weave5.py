@@ -147,15 +147,15 @@ class weave_make:
                 
             if idx%300==0:
                 toWrite = client.gather(toWrite)
-                toWrite = []
+                # toWrite = []
                 
-                client.close()
-                if self.client is None:
-                    client = Client()
-                elif self.client == 'local':
-                    client = Client()
-                else:
-                    client = Client(self.client)
+                # client.close()
+                # if self.client is None:
+                    # client = Client()
+                # elif self.client == 'local':
+                    # client = Client()
+                # else:
+                    # client = Client(self.client)
                     
             #client.run(gc.collect)
                 
