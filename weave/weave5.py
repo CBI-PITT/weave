@@ -150,6 +150,7 @@ class weave_make:
                 toWrite = []
                 
                 client.close()
+                del(client)
                 if self.client is None:
                     client = Client()
                 elif self.client == 'local':
