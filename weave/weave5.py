@@ -145,8 +145,19 @@ class weave_make:
                 time.sleep(1)
                 toWrite = [x for x in toWrite if x.status != 'finished']
                 
-            if idx==300:
-                client.run(gc.collect)
+            if idx%300==0:
+                toWrite = client.gather(toWrite)
+                toWrite = []
+                
+                client.close()
+                if self.client is None:
+                    client = Client()
+                elif self.client == 'local':
+                    client = Client()
+                else:
+                    client = Client(self.client)
+                    
+            #client.run(gc.collect)
                 
             idx+=1
                 
