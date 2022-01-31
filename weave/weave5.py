@@ -20,6 +20,7 @@ import zarr
 import dask
 from dask.delayed import delayed
 from distributed import Client
+import gc
 # client = Client('c001.cbiserver:8786')
 
 ## weave specific imports
@@ -108,7 +109,6 @@ class weave_make:
     
     def makeWeave(self):
         
-        
         if self.client is None:
             client = Client()
         elif self.client == 'local':
@@ -116,7 +116,8 @@ class weave_make:
         else:
             client = Client(self.client)
             
-            
+        inputArray = self.inputArray
+        
         toWrite = []
         for t,c,z in product(
                         range(self.meta['shape'][0]),
@@ -130,7 +131,7 @@ class weave_make:
                 client.compute(
                 delayed(self.writeZ)
                 (
-                self.inputArray[t,c,z],
+                inputArray[t,c,z],
                   t,c,z
                   )
                 )
@@ -142,6 +143,8 @@ class weave_make:
             while len(toWrite) >= self.batchSize:
                 time.sleep(1)
                 toWrite = [x for x in toWrite if x.status != 'finished']
+                
+            #client.run(gc.collect)
                 
             
         toWrite = client.gather(toWrite)
