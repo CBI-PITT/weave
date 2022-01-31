@@ -56,7 +56,7 @@ array = da.stack((ch1,ch2))
 
 startTime = time.time()
 # z = wve.weave_make(array,outputLocation, client='c001.cbiserver:8786')
-z = wve.weave_make(array,outputLocation, compression = 'zlib', client='local',batchSize=24)
+z = wve.weave_make(array,outputLocation, compression = 'zlib', client='local', clientReset=1500, batchSize=30)
 
 stopTime = time.time()
 
