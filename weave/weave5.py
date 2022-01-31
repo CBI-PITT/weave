@@ -136,8 +136,13 @@ class weave_make:
                 )
                 )
                 
-            while sum([x.status == 'pending' for x in toWrite]) >= self.batchSize:
+            #while sum([x.status == 'pending' for x in toWrite]) >= self.batchSize:
+             #   time.sleep(1)
+            
+            while len(toWrite) >= self.batchSize:
                 time.sleep(1)
+                toWrite = [x for x in toWrite if x.status != 'finished']
+                
             
         toWrite = client.gather(toWrite)
     
