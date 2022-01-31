@@ -119,13 +119,14 @@ class weave_make:
         inputArray = self.inputArray
         
         toWrite = []
+        idx = 1
         for t,c,z in product(
                         range(self.meta['shape'][0]),
                         range(self.meta['shape'][1]),
                         range(self.meta['shape'][2])
                         ):
             
-            print('Queueing z-layer {}'.format(z))
+            print('Queueing z-layer {}'.format(idx))
             
             toWrite.append(
                 client.compute(
@@ -144,7 +145,10 @@ class weave_make:
                 time.sleep(1)
                 toWrite = [x for x in toWrite if x.status != 'finished']
                 
-            #client.run(gc.collect)
+            if idx==300:
+                client.run(gc.collect)
+                
+            idx+=1
                 
             
         toWrite = client.gather(toWrite)
