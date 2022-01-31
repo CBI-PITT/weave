@@ -147,7 +147,7 @@ class weave_make:
                 
             if idx%300==0:
                 toWrite = client.gather(toWrite)
-                # toWrite = []
+                toWrite = []
                 
                 # client.close()
                 # if self.client is None:
