@@ -32,7 +32,7 @@ location= r'z:\testWeave'
 
 ## A class to create and read weave
 class weave_make:
-    def __init__(self, inputArray, saveLocation, maxLowResMB=10, chunks=(512,512), compression='zlib', client=None, clientReset=1000, batchSize=10):
+    def __init__(self, inputArray, saveLocation, maxLowResMB=10, chunks=(512,512), compression='zlib', client=None, clientReset=1000, batchSize=10, continueFrom=None):
         '''
         Input array should be layed out as (t,c,z,y,x)
         '''
@@ -57,6 +57,7 @@ class weave_make:
         self.client = client
         self.batchSize = batchSize
         self.clientReset = clientReset
+        self.continueFrom = continueFrom
         
         ## Create meta dict which will be saved to disk to descrive weave array
         self.meta = {}
@@ -126,6 +127,11 @@ class weave_make:
                         range(self.meta['shape'][1]),
                         range(self.meta['shape'][2])
                         ):
+            
+            if self.continueFrom is not None and idx < self.continueFrom:
+                idx+=1
+                print('Skipping z-layer {}'.format(idx))
+                continue
             
             print('Queueing z-layer {}'.format(idx))
             
