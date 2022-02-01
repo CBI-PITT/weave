@@ -107,6 +107,7 @@ class weave_read:
         # print(images)
         # print(len(images))
         
+        # Can this be paralleled?
         print('Laying Image on Canvas')
         idx=0
         for ii,oo in product(range(weaveNumber),range(weaveNumber)):
