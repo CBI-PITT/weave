@@ -24,6 +24,7 @@ import imagecodecs
 import zarr
 import dask
 from dask.delayed import delayed
+import numba
 
 
 from itertools import product
@@ -107,19 +108,34 @@ class weave_read:
         # print(images)
         # print(len(images))
         
-        # Can this be paralleled?
+        # # Can this be paralleled?
+        # print('Laying Image on Canvas')
+        # idx=0
+        # for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+        #     canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
+        #     idx+=1
+                
+        # return canvas
+        return self.insertOnCanvas(canvas,images,t,c,z,weaveNumber)
+    
+    @staticmethod
+    @numba.jit(nopython=True,parallel=True)  
+    def insertOnCanvas(canvas,images,t,c,z,weaveNumber):
         print('Laying Image on Canvas')
         idx=0
-        for ii,oo in product(range(weaveNumber),range(weaveNumber)):
-            canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
-            idx+=1
-                
-        return canvas
-            
-        
+        for ii in range(weaveNumber):
+            for oo in range(weaveNumber):
+                canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
+                idx+=1
+    
     def readSubSample(self,t,c,z,y,x):
         return tifffile.imread(getFullFilePath(self.location,t,c,z,y,x))
         
 
 # a = weave_read(location)
 # start = time.time();z=a[0];print(time.time()-start)
+
+
+##  Numba on class method:
+#    https://stackoverflow.com/questions/41769100/how-do-i-use-numba-on-a-member-function-of-a-class
+
