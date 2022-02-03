@@ -29,21 +29,25 @@ from dask.delayed import delayed
 from itertools import product
 ## weave specific imports
 try:
-    from .util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+    from .util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile,make5DimSlice
 except Exception:
-    from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+    try:
+        from util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile,make5DimSlice
+    except Exception:
+        from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile,make5DimSlice
 
 location= r'/CBI_Hive/globus/pitt/bil/weave'
+location = r'c:\code\weave_out'
 
 ## A class to read weave
 class weave_read:
-    def __init__(self, location, resolutionLock=0):
+    def __init__(self, location, ResolutionLock=0):
         '''
         Input array should be layed out as (t,c,z,y,x)
         '''
         
         self.location = location
-        self.resolutionLock = resolutionLock
+        self.ResolutionLock = ResolutionLock
         self.metaFile = os.path.join(location,'weave.json')
         
         with open(self.metaFile, 'r') as f:
@@ -62,14 +66,26 @@ class weave_read:
         self.weaveNumber = self.meta['weaveNumber']
         
     def __getitem__(self,key):
-        if isinstance(key,int):
-            return self.getResolutionLevelZ(key,0,0,5000)
-            
+        
+        res,key = make5DimSlice(key,self.ResolutionLock,self.weaveNumber)
+        
+        '''
+        NOTE: At this point, key should always be of len(key)==5 and each
+        element should be a slice object.
+        
+        res will indicate the resolution level from which to extract data.
+        '''
+        
+        ##  Need to work on a way to extract 3D accross Z
+        if all(x==slice(None) for x in key[-2::]):
+            return self.getResolutionLevelZ(res,0,0,key) #<-- not correct
+                
+    
     def getResolutionLevelZ(self,resolutionLevel,t,c,z):
         
         
         ###############################################################################
-        ## Reconstruct any resolution level of the whole image
+        ## Reconstruct any resolution level of a the whole 'z' image
         # Resolution levels 0 (higest - fullres) - subImages['sub_sample']-1 (lowest)
         # Higher resolution levels are lower resolution
         
