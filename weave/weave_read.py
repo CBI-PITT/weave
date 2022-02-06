@@ -25,6 +25,7 @@ import imagecodecs
 import zarr
 import dask
 from dask.delayed import delayed
+import dask.array as da
 
 
 from itertools import product
@@ -83,16 +84,32 @@ class weave_read:
             if isinstance(self.meta[ii],list):
                 self.meta[ii] = tuple(self.meta[ii])
         
-        self.setResolutionLock(ResolutionLock)
-        self.chunks = self.meta['chunks']
         self.dtype = np.dtype(self.meta['dtype'])
         self.compression = self.meta['compression']
         self.weaveNumber = self.meta['weaveNumber']
+        self.setResolutionLock(ResolutionLock)
         
     def setResolutionLock(self,ResolutionLock):
         self.ResolutionLock = ResolutionLock
-        self.shape = (*self.meta['shape'][:-2],*self.meta['resolution{}_shape'.format(self.ResolutionLock)])
+        self.shape = (
+            *self.meta['shape'][:-2],
+            *self.meta['resolution{}_shape'.format(self.ResolutionLock)]
+            )
         self.size = math.prod(self.shape)
+        self.ndim = 5
+        
+        '''
+        Chunk size changes for each resolution level.  Although the chunks for each
+        subresolution remains the same, for exsample (512,512), the effective chunk
+        size increases in each dimension by the resolution level.  For example
+        resolution_level4 must read 5 images for each dim.  Thus the subresolution 
+        chunksize is multiplied by 5.  This makes reads more efficient.
+        '''
+        self.chunks = (
+            1,1,1,
+            self.meta['chunks'][0]*(self.weaveNumber-self.ResolutionLock),
+            self.meta['chunks'][1]*(self.weaveNumber-self.ResolutionLock)
+            )
         
     def __getitem__(self,key):
         
@@ -351,7 +368,7 @@ class weave_read:
                         '''
                         yLen = len(range(outShape[-2])[ii::weaveNumber])
                         xLen = len(range(outShape[-1])[oo::weaveNumber])
-                        print('{}_{}_{}_{}_{}'.format(tt,cc,zz,ii,oo))
+                        # print('{}_{}_{}_{}_{}'.format(tt,cc,zz,ii,oo))
                         canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] =\
                             self.readSubSampleSlice(tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice)[0:yLen,0:xLen]
         
@@ -399,8 +416,9 @@ class weave_read:
         # for ii,oo in product(range(weaveNumber),range(weaveNumber)):
         #     canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
         #     idx+=1
-                
-        return np.squeeze(canvas)
+        
+        return canvas
+        # return np.squeeze(canvas)
 # a = weave_read(location)
 # start = time.time();z=a[0];print(time.time()-start)
 
