@@ -351,9 +351,20 @@ class weave_read:
         # Form canvas that weave data will be laid onto   
         canvas = np.zeros(outShape,dtype=self.dtype)
         print(canvas.shape)
-        for idxt, tt in enumerate(outIter[0]):
-            for idxc, cc in enumerate(outIter[1]):
-                for idxz, zz in enumerate(outIter[2]):
+        
+        images = (
+            delayed(self.readSubSampleSlice)
+            (tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice) 
+            for tt,cc,zz,ii,oo in product(outIter[0],outIter[1],outIter[2],range(weaveNumber),range(weaveNumber))
+         )
+        
+        images = dask.compute(images)
+            
+            
+        idx = 0
+        for idxt, __ in enumerate(outIter[0]):
+            for idxc, __ in enumerate(outIter[1]):
+                for idxz, __ in enumerate(outIter[2]):
                     for ii,oo in product(range(weaveNumber),range(weaveNumber)):
                         '''Read images off disk and build canvas'''
                         
@@ -366,11 +377,13 @@ class weave_read:
                         save smaller images padded with a row/col with black to 
                         make this unnecessary
                         '''
-                        yLen = len(range(outShape[-2])[ii::weaveNumber])
-                        xLen = len(range(outShape[-1])[oo::weaveNumber])
+                        
+                        
                         # print('{}_{}_{}_{}_{}'.format(tt,cc,zz,ii,oo))
-                        canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] =\
-                            self.readSubSampleSlice(tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice)[0:yLen,0:xLen]
+                        canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] = images[idx][0][
+                            0:len(range(outShape[-2])[ii::weaveNumber]),
+                            0:len(range(outShape[-1])[oo::weaveNumber])
+                            ]
         
         
         ###############################################################################
