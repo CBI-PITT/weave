@@ -75,6 +75,7 @@ class weave_read:
         
         self.location = location
         self.metaFile = os.path.join(location,'weave.json')
+        self.delayed = delayed
         
         with open(self.metaFile, 'r') as f:
             self.meta = json.load(f)
@@ -125,9 +126,15 @@ class weave_read:
         # the size of resolution leve.  Error if not valid.
         self.isSliceValid(key,res)
         
-        print('Get Slice: {}'.format(key))
+        print('Get Res {} Slice: {}'.format(res,key))
         
-        return self.getSlice(res,key)
+        # Imediately return result
+        if self.delayed == False:
+            return self.getSliceDask(res,key)
+        # Return a dask array
+        if self.delayed == True:
+            return self.getSlice(res,key)
+         
                 
     
     def make5DimSlice(self,key):
@@ -304,7 +311,7 @@ class weave_read:
         return ( getFullFilePath(self.location,t,c,z,imageY,imageX), imageYOffset, imageXOffset )
         
     
-    def getSlice(self,res,key):
+    def getSliceDask(self,res,key):
         
         weaveNumber = self.weaveNumber - res
         # print(weaveNumber)
@@ -332,11 +339,11 @@ class weave_read:
         
         
         # Queue Read all images
-        images = (
+        images = [
             delayed(self.readSubSampleSlice)
             (tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice) 
             for tt,cc,zz,ii,oo in product(outIter[0],outIter[1],outIter[2],range(weaveNumber),range(weaveNumber))
-         )
+         ]
         
         # Read all images
         images = dask.compute(images)
@@ -414,8 +421,68 @@ class weave_read:
         #     canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
         #     idx+=1
         
-        # return canvas
-        return np.squeeze(canvas)
+        return canvas
+        # return np.squeeze(canvas)
+    
+    
+    def getSlice(self,res,key):
+        
+        weaveNumber = self.weaveNumber - res
+        # print(weaveNumber)
+        
+        outIter = tuple((range(x.start,x.stop,x.step) for x in key))
+        # print(outIter)
+        outShape = tuple((len(x) for x in outIter))
+        
+        
+        
+        # Determine the specific regions of low res images that must be read
+        
+        # Start values
+        
+        
+        _,yStart,xStart = self.pixelLocation(res,0,0,0,outIter[-2][0],outIter[-1][0])
+        _,yStop,xStop = self.pixelLocation(res,0,0,0,outIter[-2][-1],outIter[-1][-1])
+        yStop += 1
+        xStop += 1
+        
+        lowResYSlice = slice(yStart,yStop,outIter[-2].step)
+        lowResXSlice = slice(xStart,xStop,outIter[-1].step)
+        # print(lowResYSlice)
+        # print(lowResXSlice)
+        
+        # Form canvas that weave data will be laid onto   
+        canvas = np.zeros(outShape,dtype=self.dtype)
+        # print(canvas.shape)
+            
+        idx = 0
+        for idxt, tt in enumerate(outIter[0]):
+            for idxc, cc in enumerate(outIter[1]):
+                for idxz, zz in enumerate(outIter[2]):
+                    for ii,oo in product(range(weaveNumber),range(weaveNumber)):
+                        '''Read images off disk and build canvas'''
+                        
+                        ''' ***Need to parallelize the reads*** '''
+                        
+                        '''
+                        The following code (yLen/xLen) trims images read off disk to fit the
+                        canvas slice.  This is necessary because some images are 
+                        smaller by 1 row/col.  Maybe future implementation should
+                        save smaller images padded with a row/col with black to 
+                        make this unnecessary
+                        '''
+                        
+                        yTrim = len(range(outShape[-2])[ii::weaveNumber])
+                        xTrim = len(range(outShape[-1])[oo::weaveNumber])
+                        # print('{}_{}_{}_{}_{}'.format(tt,cc,zz,ii,oo))
+                        canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] = \
+                            self.readSubSampleSlice(tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice)[
+                            0:yTrim,
+                            0:xTrim
+                            ]
+        
+        return canvas
+        # return np.squeeze(canvas)
 # a = weave_read(location)
 # start = time.time();z=a[0];print(time.time()-start)
 
