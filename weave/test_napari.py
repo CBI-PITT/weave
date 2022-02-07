@@ -9,6 +9,8 @@ import napari
 import dask.array as da
 
 location = r'c:\code\weave_out'
+location= r'h:/globus/pitt/bil/weave'
+
 a = weave_read(location)
 
 data = []

@@ -39,7 +39,9 @@ except Exception:
         from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
 
 # location= r'/CBI_Hive/globus/pitt/bil/weave'
-location = r'c:\code\weave_out'
+location= r'h:/globus/pitt/bil/weave'
+
+# location = r'c:\code\weave_out'
 
 '''
 Currently this is working!
