@@ -68,7 +68,7 @@ To Do:
 
 ## A class to read weave
 class weave_read:
-    def __init__(self, location, ResolutionLock=0):
+    def __init__(self, location, ResolutionLock=0, delayed=False):
         '''
         Input array should be layed out as (t,c,z,y,x)
         '''
@@ -113,6 +113,8 @@ class weave_read:
         
     def __getitem__(self,key):
         
+        print('In key: {}'.format(key))
+        
         # Force a 5 dim slice representing (t,c,z,y,x)
         key,res = self.make5DimSlice(key)
         
@@ -122,6 +124,8 @@ class weave_read:
         # Test whether slice is valid for the given resolution level based on
         # the size of resolution leve.  Error if not valid.
         self.isSliceValid(key,res)
+        
+        print('Get Slice: {}'.format(key))
         
         return self.getSlice(res,key)
                 
@@ -133,18 +137,20 @@ class weave_read:
         resolution will be extracted and returned.
         '''
         
-        print('In key: {}'.format(key))
+        # print('In key: {}'.format(key))
         
         res = self.ResolutionLock
         # For a complete 6 dim slice, extract resolution level [0] and reform
         # the key as a 5 dim tuple        
-        if not isinstance(key, (slice,int)) and len(key) == 6:
+        if not isinstance(key, (slice,int,np.integer)) and len(key) == 6:
             res = key[0]
             if res >= self.weaveNumber:
                 raise ValueError('Layer is larger than the number of ResolutionLevels')
             key = tuple((x for x in key[1::]))
 
-        if isinstance(key, int):
+        if isinstance(key, (np.integer,int)):
+            if isinstance(key,np.integer):
+                key = key.item()
             key = [slice(key)]
             
         # All slices must be converted to 5 dims and placed into a tuple
@@ -153,7 +159,7 @@ class weave_read:
 
         # Convert int/slice mix to a tuple of slices
         elif isinstance(key, tuple):
-            key = tuple((slice(x) if isinstance(x, (int,list)) else x for x in key))
+            key = tuple((slice(x) if isinstance(x, (int,np.integer,list)) else x for x in key))
         
         # Size tuple to len==5 by appending slice(None) to the end
         if len(key) < 5:
@@ -163,31 +169,7 @@ class weave_read:
         else:
             tuple(key)
         
-        # Fill in y,x slice None values with shape of sliced images
-        newXYSlices = []
-        for idx,ii in enumerate(key[-2:]):
-            newSlice = []
-            if ii.start is None:
-                newSlice.append(0)
-            else:
-                newSlice.append(ii.start)
-            
-            if ii.stop is None:
-                newSlice.append(self.meta['resolution{}_shape'.format(res)][idx])
-            else:
-                newSlice.append(ii.stop)
-            
-            if ii.step is None:
-                newSlice.append(1)
-            else:
-                newSlice.append(ii.step)
-                
-            newXYSlices.append(slice(*newSlice))
-
-        
-        key = (*key[:-2],*newXYSlices)
-        
-        print('Out key: {}'.format(key))
+        # print('Out key: {}'.format(key))
         ## NOTE: At this point, key should always be of len(key)==5 and each
         ## element should be a slice object.
         return key,res
@@ -200,7 +182,7 @@ class weave_read:
         '''
         
         newKey = []
-        for val in key:
+        for key_idx,val in enumerate(key):
             start = val.start
             stop = val.stop
             step = val.step
@@ -208,13 +190,13 @@ class weave_read:
             if step is None:
                 step = 1
                 
-            if start is None and isinstance(stop, int):
+            if start is None and isinstance(stop, (np.integer,int)):
                 start = stop
                 stop += 1
             
             if start is None and stop is None:
-                start = 1
-                stop = 1
+                start = 0
+                stop = self.shape[key_idx]
             
             newKey.append(slice(start,stop,step))
         
@@ -225,8 +207,8 @@ class weave_read:
         shape = self.meta['resolution{}_shape'.format(res)]
         
         shape = (*self.shape[:-2],*shape)
-        print(shape)
-        print(key)
+        # print(shape)
+        # print(key)
         for dim,_ in enumerate(key):
             if key[dim].stop > shape[dim]+1:
                 raise ValueError('Stop value of {} for dimension {} is bigger than the size of the array: {}'.format(key[dim].stop,dim,shape[dim]))
@@ -325,10 +307,10 @@ class weave_read:
     def getSlice(self,res,key):
         
         weaveNumber = self.weaveNumber - res
-        print(weaveNumber)
+        # print(weaveNumber)
         
         outIter = tuple((range(x.start,x.stop,x.step) for x in key))
-        print(outIter)
+        # print(outIter)
         outShape = tuple((len(x) for x in outIter))
         
         
@@ -345,21 +327,23 @@ class weave_read:
         
         lowResYSlice = slice(yStart,yStop,outIter[-2].step)
         lowResXSlice = slice(xStart,xStop,outIter[-1].step)
-        print(lowResYSlice)
-        print(lowResXSlice)
+        # print(lowResYSlice)
+        # print(lowResXSlice)
         
-        # Form canvas that weave data will be laid onto   
-        canvas = np.zeros(outShape,dtype=self.dtype)
-        print(canvas.shape)
         
+        # Queue Read all images
         images = (
             delayed(self.readSubSampleSlice)
             (tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice) 
             for tt,cc,zz,ii,oo in product(outIter[0],outIter[1],outIter[2],range(weaveNumber),range(weaveNumber))
          )
         
+        # Read all images
         images = dask.compute(images)
-            
+        
+        # Form canvas that weave data will be laid onto   
+        canvas = np.zeros(outShape,dtype=self.dtype)
+        # print(canvas.shape)
             
         idx = 0
         for idxt, __ in enumerate(outIter[0]):
@@ -430,8 +414,8 @@ class weave_read:
         #     canvas[ii::weaveNumber,oo::weaveNumber] = images[idx]
         #     idx+=1
         
-        return canvas
-        # return np.squeeze(canvas)
+        # return canvas
+        return np.squeeze(canvas)
 # a = weave_read(location)
 # start = time.time();z=a[0];print(time.time()-start)
 
