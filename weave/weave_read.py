@@ -30,13 +30,18 @@ import dask.array as da
 
 from itertools import product
 ## weave specific imports
+# try:
+    # from .util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+# except Exception:
+    # try:
+        # from util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+    # except Exception:
+        # from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+
 try:
-    from .util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+    from util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
 except Exception:
-    try:
-        from util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
-    except Exception:
-        from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
+    from weave.util import pixToMB, MBToPix, prepareAndGetFilePath, getFullFilePath, makeDir, getMetaFile
 
 # location= r'/CBI_Hive/globus/pitt/bil/weave'
 location= r'h:/globus/pitt/bil/weave'
@@ -90,6 +95,7 @@ class weave_read:
         self.dtype = np.dtype(self.meta['dtype'])
         self.compression = self.meta['compression']
         self.weaveNumber = self.meta['weaveNumber']
+        self.ResolutionLevels = self.weaveNumber
         self.setResolutionLock(ResolutionLock)
         
     def setResolutionLock(self,ResolutionLock):
@@ -100,6 +106,9 @@ class weave_read:
             )
         self.size = math.prod(self.shape)
         self.ndim = 5
+        
+        self.TimePoints = self.shape[0]
+        self.Channels = self.shape[1]
         
         '''
         Chunk size changes for each resolution level.  Although the chunks for each
@@ -341,15 +350,15 @@ class weave_read:
         
         
         # Queue Read all images
-        images = [
+        images = (
             delayed(self.readSubSampleSlice)
             (tt,cc,zz,ii,oo,lowResYSlice,lowResXSlice) 
             for tt,cc,zz,ii,oo in product(outIter[0],outIter[1],outIter[2],range(weaveNumber),range(weaveNumber))
-         ]
+         )
         
         # Read all images
         images = dask.compute(images)
-        
+        #print(images)
         # Form canvas that weave data will be laid onto   
         canvas = np.zeros(outShape,dtype=self.dtype)
         # print(canvas.shape)
@@ -371,12 +380,15 @@ class weave_read:
                         make this unnecessary
                         '''
                         
-                        
+                        yTrim = len(range(outShape[-2])[ii::weaveNumber])
+                        xTrim = len(range(outShape[-1])[oo::weaveNumber])
                         # print('{}_{}_{}_{}_{}'.format(tt,cc,zz,ii,oo))
-                        canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] = images[idx][0][
-                            0:len(range(outShape[-2])[ii::weaveNumber]),
-                            0:len(range(outShape[-1])[oo::weaveNumber])
+                        canvas[idxt,idxc,idxz,ii::weaveNumber,oo::weaveNumber] = images[0][idx][
+                            0:yTrim,
+                            0:xTrim
                             ]
+                        
+                        idx += 1
         
         
         ###############################################################################
@@ -456,8 +468,7 @@ class weave_read:
         # Form canvas that weave data will be laid onto   
         canvas = np.zeros(outShape,dtype=self.dtype)
         # print(canvas.shape)
-            
-        idx = 0
+        
         for idxt, tt in enumerate(outIter[0]):
             for idxc, cc in enumerate(outIter[1]):
                 for idxz, zz in enumerate(outIter[2]):
